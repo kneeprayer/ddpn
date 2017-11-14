@@ -1,0 +1,53 @@
+version: '3'
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    volumes:
+      - ./nginx/html:/var/www/html
+      - ./nginx/conf:/etc/nginx/conf.d
+    ports:
+      - 80:80
+    links:
+      - django
+  django:
+    container_name: django
+    build:
+      context: django
+      dockerfile: Dockerfile
+    command: python3 manage.py runserver 0.0.0.0:8000
+    environment:
+      POSTGRES_USER: $MYAPP_DATABASE_USERNAME
+      POSTGRES_PASSWORD: $MYAPP_DB_USER_PASSWORD
+      POSTGRES_DATABASE_NAME: $MYAPP_DATABASE_NAME_DEV
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./django:/app
+    #restart: always
+    links:
+      - postgres
+  postgres:
+    container_name: postgres
+    # image: postgres:9.6.6-alpine
+    build:
+      context: postgres
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: $MYAPP_DATABASE_USERNAME
+      POSTGRES_PASSWORD: $MYAPP_DB_USER_PASSWORD
+      POSTGRES_DB: $MYAPP_DATABASE_NAME_DEV
+      # PGDATA: /var/lib/postgresql/data
+      # POSTGRES_INITDB_XLOGDIR: /var/lib/postgresql/data
+      # POSTGRES_INITDB_ARGS: -e POSTGRES_INITDB_ARGS="--data-checksums"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./postgres/initdb/:/docker-entrypoint-initdb.d
+volumes:
+  db-data:
+    driver: local
